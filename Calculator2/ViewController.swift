@@ -67,6 +67,9 @@ class ViewController: UIViewController {
         if let displayValue = brain.descrpiton{
             operations = displayValue
         }
+        else{
+            operations = ""
+        }
     }
     
 }

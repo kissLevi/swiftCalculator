@@ -54,7 +54,7 @@ struct CalculatorBrain{
     ]
     mutating func setOpreand(_ operand:Double){
         if let previosOperations = accumulator.description{
-            accumulator = (operand,(previosOperations.0+String(operand),""))
+            accumulator = (operand,(previosOperations.0,"..."))
         }
         else{
             accumulator = (operand,(String(operand),""))
@@ -74,14 +74,20 @@ struct CalculatorBrain{
                 // performPendingBinaryOperation()
                 
             case .unaryOperation(let function):
-                print("unary")
-                if resultIsPending{
-                    let last = accumulator.description!.0.split(separator: "+")
-                    accumulator = (function(accumulator.number!),(symbol + "(" + accumulator.description!.0 + ")" ,"="))
-
-                }
-                else if let number = accumulator.number{
-                    accumulator = (function(number),(symbol + "(" + String(number) + ")" ,"="))
+                if let number = accumulator.number{
+                    if resultIsPending{
+                        accumulator = (function(number),(accumulator.description!.0 + symbol + "(" + String(number) + ")" ,"="))
+                    }
+                    else{
+                        if let previusResult = accumulator.description{
+                            accumulator = (function(number),(symbol + "(" + previusResult.0 + ")" ,"="))
+                        }
+                        else{
+                            accumulator = (function(number),(symbol + "(" + String(number) + ")" ,"="))
+                        }
+                        
+                    }
+                    
                 }
 //                if resultIsPending{
 //                    accumulator = (function(accumulator.number!),"\(accumulator.description!)\(symbol)\(accumulator.number!)")
@@ -104,7 +110,7 @@ struct CalculatorBrain{
                 performPendingBinaryOperation()
                 
             case .clear:
-                accumulator = (0,("",""))
+                accumulator = (0,nil)
                 pendingBinaryOperation = nil
                 resultIsPending = false
             }
@@ -130,8 +136,9 @@ struct CalculatorBrain{
     
     private mutating func performPendingBinaryOperation(){
         if pendingBinaryOperation != nil && accumulator.number != nil{
-            accumulator = (pendingBinaryOperation!.performOperation(with: accumulator.number!),(accumulator.description!.0,"="))
+            accumulator = (pendingBinaryOperation!.performOperation(with: accumulator.number!),(accumulator.description!.0+String(accumulator.number!),"="))
             pendingBinaryOperation = nil
+            resultIsPending = false
         }
     }
     
