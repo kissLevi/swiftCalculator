@@ -21,11 +21,14 @@ class ViewController: UIViewController {
             // We check first if the user hitted . and then if there isnt't any . in display if both are true we append . in other case if there is . in
             // display we append nothing and if hitted button wasn't . we append it
             screen.text! += sender.currentTitle! == "." ? !screen.text!.contains(".") ? sender.currentTitle! : "" : sender.currentTitle!
+            calculation.text! += sender.currentTitle! == "." ? !calculation.text!.contains(".") ? sender.currentTitle! : "" : sender.currentTitle!
         }
         else{
             //We check if the hitted button is . In that case we write 0. to the screen because we don't want to have .1012
             screen.text! = sender.currentTitle! == "." ? "0\(sender.currentTitle!)": sender.currentTitle!
+            calculation.text! += sender.currentTitle! == "." ? "0\(sender.currentTitle!)": sender.currentTitle!
             userInMiddleOfTyping = true
+            
         }
         
         
@@ -65,7 +68,13 @@ class ViewController: UIViewController {
             displayValue = brainResault
         }
         if let displayValue = brain.descrpiton{
-            operations = displayValue
+            if brain.resultIsPending {
+                operations = displayValue
+            }
+            else{
+                operations = displayValue + "="
+            }
+            
         }
         else{
             operations = ""

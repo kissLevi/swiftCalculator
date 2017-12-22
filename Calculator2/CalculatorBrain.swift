@@ -12,7 +12,6 @@ import Foundation
 struct CalculatorBrain{
     private var currentNumber : Double?
     
-    
     private var accumulator :(number : Double?,description : (String,String)?)
     
     var result : Double? {
@@ -28,6 +27,9 @@ struct CalculatorBrain{
             return nil
         }
     }
+    
+    var resultIsPending : Bool = false
+  
     
     private enum Operation{
         case constant(Double)
@@ -52,9 +54,13 @@ struct CalculatorBrain{
         "=" : Operation.equals,
         "C" : Operation.clear
     ]
+    
+    //private var variables : [String:Double]
+    
+   
     mutating func setOpreand(_ operand:Double){
         if let previosOperations = accumulator.description{
-            accumulator = (operand,(previosOperations.0,"..."))
+            accumulator = (operand,(previosOperations.0,String(operand)))
         }
         else{
             accumulator = (operand,(String(operand),""))
@@ -63,12 +69,17 @@ struct CalculatorBrain{
     }
     
     mutating func performOperation(_ symbol:String){
+        
         if let operation = operations[symbol] {
             switch operation {
                 
             case .constant(let value):
                 if let previosOperations = accumulator.description{
-                    accumulator = (value,(previosOperations.0+symbol,""))
+                    accumulator = (value,(previosOperations.0,symbol))
+                }
+                else{
+                    accumulator=(value,(symbol,""))
+                    
                 }
                
                 // performPendingBinaryOperation()
@@ -76,33 +87,32 @@ struct CalculatorBrain{
             case .unaryOperation(let function):
                 if let number = accumulator.number{
                     if resultIsPending{
-                        accumulator = (function(number),(accumulator.description!.0 + symbol + "(" + String(number) + ")" ,"="))
+                        accumulator = (function(number),(accumulator.description!.0 + symbol + "(" + String(accumulator.description!.1) + ")" ,""))
                     }
                     else{
                         if let previusResult = accumulator.description{
-                            accumulator = (function(number),(symbol + "(" + previusResult.0 + ")" ,"="))
+                            accumulator = (function(number),(symbol + "(" + previusResult.0 + ")",""))
                         }
                         else{
-                            accumulator = (function(number),(symbol + "(" + String(number) + ")" ,"="))
+                            accumulator = (function(number),(symbol + "(" + String(number) + ")",""))
                         }
-                        
+
                     }
-                    
+
                 }
-//                if resultIsPending{
-//                    accumulator = (function(accumulator.number!),"\(accumulator.description!)\(symbol)\(accumulator.number!)")
-//                }
-//                else{
-//                    accumulator = (function(accumulator.number!),"\(symbol)(\(accumulator.description!))")
-//                }
                 
             case .binaryOperation(let function):
                 if pendingBinaryOperation != nil {
-                    accumulator = (accumulator.number,(accumulator.description!.0 + symbol,"..."))
+                    accumulator = (accumulator.number,accumulator.description!)
+                    performPendingBinaryOperation()
+                    pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: accumulator.number!)
+                    accumulator = (accumulator.number,(accumulator.description!.0 + symbol,accumulator.description!.1))
+                    resultIsPending = true
+                    
                 }
                 else{
                     pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: accumulator.number!)
-                    accumulator = (nil,(accumulator.description!.0 + symbol,"..."))
+                    accumulator = (nil,(accumulator.description!.0+symbol,accumulator.description!.1))
                     resultIsPending = true
                 }
                 
@@ -119,7 +129,7 @@ struct CalculatorBrain{
         
     }
     
-    private var resultIsPending : Bool = false
+    
     
     private var pendingBinaryOperation : PendingBinaryOperation?
     
@@ -136,16 +146,49 @@ struct CalculatorBrain{
     
     private mutating func performPendingBinaryOperation(){
         if pendingBinaryOperation != nil && accumulator.number != nil{
-            accumulator = (pendingBinaryOperation!.performOperation(with: accumulator.number!),(accumulator.description!.0+String(accumulator.number!),"="))
+            accumulator = (pendingBinaryOperation!.performOperation(with: accumulator.number!),(accumulator.description!.0+accumulator.description!.1,""))
             pendingBinaryOperation = nil
             resultIsPending = false
         }
+    }
+}
+
+struct Inputs {
+    private enum Symbols{
+        case variable(String)
+        case number(Double)
+        case operation(String)
+    }
+    
+    private var variables:[String:Double]?
+    
+    private var inData:[Symbols]?
+    
+    mutating private func setIndata(data:Symbols){
+        if inData != nil{
+            inData?.append(data)
+        }
+        else{
+            inData = [data]
+        }
+    }
+    
+    mutating func storeOpreand(_ operand:Double){
+        setIndata(data: Symbols.number(operand))
+    }
+    
+    mutating func storeOperand(variable named: String){
+        setIndata(data: Symbols.variable(named))
+    }
+    
+    mutating func storeOperation(_ operation:String){
+        setIndata(data: Symbols.operation(operation))
     }
     
     
     
     
- 
+    
     
 }
 
