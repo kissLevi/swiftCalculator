@@ -10,7 +10,14 @@ import Foundation
 
 
 struct CalculatorBrain{
-    private var currentNumber : Double?
+    
+    private enum InputTypes{
+        case symbol(String)
+        case number(Double)
+        case variable(String)
+    }
+    
+    private var inputs = [InputTypes]()
     
     private var accumulator :(number : Double?,description : (String,String)?)
     
@@ -21,6 +28,9 @@ struct CalculatorBrain{
     }
     var descrpiton : String? {
         get{
+            for var asd in inputs{
+                print(asd)
+            }
             if let result = accumulator.description{
                 return result.0 + result.1
             }
@@ -59,6 +69,8 @@ struct CalculatorBrain{
     
    
     mutating func setOpreand(_ operand:Double){
+        inputs.append(InputTypes.number(operand))
+        
         if let previosOperations = accumulator.description{
             accumulator = (operand,(previosOperations.0,String(operand)))
         }
@@ -68,9 +80,16 @@ struct CalculatorBrain{
         
     }
     
+    mutating func setOperand(variable named: String){
+        inputs.append(InputTypes.variable(named))
+    }
+    
     mutating func performOperation(_ symbol:String){
         
         if let operation = operations[symbol] {
+            inputs.append(InputTypes.symbol(symbol))
+            
+            
             switch operation {
                 
             case .constant(let value):
