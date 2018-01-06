@@ -103,7 +103,6 @@ struct CalculatorBrain{
             var description : String = ""
             var pendingBinaryOperation : PendingBinaryOperation?
             for currentIndex in 0...inputs.count-1{
-                print(inputs[currentIndex])
                 switch inputs[currentIndex]{
                 case .number(let value):
                     description += String(value)
@@ -123,19 +122,25 @@ struct CalculatorBrain{
                                     }
                                 }
                             }
-                            
+                    
                         case .binaryOperation(let function):
-                            if pendingBinaryOperation == nil && 0 < currentIndex && currentIndex < inputs.count-1{
-                                
-                                if let firstOperand = getNumber(inputs[currentIndex-1]){
-                                    if let secondOperand = getNumber(inputs[currentIndex+1]){
-                                        pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: firstOperand)
-                                        let resultOfOperation = pendingBinaryOperation!.performOperation(with: secondOperand)
-                                        result = result == nil ? resultOfOperation : result! + resultOfOperation
-                                        pendingBinaryOperation = nil
+                            if pendingBinaryOperation == nil && currentIndex < inputs.count-1{
+                                if let secondOperand = getNumber(inputs[currentIndex+1]){
+                                    if result != nil{
+                                        pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: result!)
+                                        result! = pendingBinaryOperation!.performOperation(with: secondOperand)
+                                        
                                     }
+                                    else if 0<currentIndex{
+                                        if let firstOperand = getNumber(inputs[currentIndex-1]){
+                                            pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: firstOperand)
+                                            result = pendingBinaryOperation!.performOperation(with: secondOperand)
+                                        }
+                                    }
+                                    pendingBinaryOperation = nil
                                 }
                             }
+                            
                             description += symbol
                             
                         case .equals:
@@ -150,10 +155,8 @@ struct CalculatorBrain{
                 case .variable(let value):
                     description += value
                 }
-                
-                
             }
-            
+            print(description)
             print(result)
             print("-----")
             return (result,isPending,description)
@@ -163,7 +166,7 @@ struct CalculatorBrain{
         if let operation = operations[symbol] {
             inputs.append(InputTypes.symbol(symbol))
             
-             evaluate()
+            
             switch operation {
                 
             case .constant(let value):
@@ -216,7 +219,7 @@ struct CalculatorBrain{
                 resultIsPending = false
             }
         }
-        
+         evaluate()
         
     }
     
