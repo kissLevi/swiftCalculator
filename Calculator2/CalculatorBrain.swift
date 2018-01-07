@@ -19,23 +19,28 @@ struct CalculatorBrain{
     
     private var inputs = [InputTypes]()
     
-    private var accumulator :(number : Double?,description : (String,String)?)
-    
     var result : Double? {
         get{
-            return accumulator.number
+            return evaluate().result
         }
     }
     var descrpiton : String? {
         get{
-            if let result = accumulator.description{
-                return result.0 + result.1
+            let operations = evaluate().description
+            if operations == ""{
+                return nil
             }
-            return nil
+            else{
+                return operations
+            }
         }
     }
     
-    var resultIsPending : Bool = false
+    var resultIsPending : Bool {
+        get{
+            return evaluate().isPending
+        }
+    }
   
     
     private enum Operation{
@@ -61,27 +66,28 @@ struct CalculatorBrain{
         "=" : Operation.equals,
         "C" : Operation.clear
     ]
-    
-    //private var variables : [String:Double]
-    
    
     mutating func setOpreand(_ operand:Double){
-        
         inputs.append(InputTypes.number(operand))
-        
-        if let previosOperations = accumulator.description{
-            accumulator = (operand,(previosOperations.0,String(operand)))
-        }
-        else{
-            accumulator = (operand,(String(operand),""))
-        }
-       
-        
     }
     
     mutating func setOperand(variable named: String){
         inputs.append(InputTypes.variable(named))
     }
+    
+    mutating func performOperation(_ symbol:String){
+        switch inputs.last!{
+        case .symbol(let value):
+            if value == "C" || value == "=" || symbol == "C"{
+                inputs.append(InputTypes.symbol(symbol))
+            }
+        default:
+            inputs.append(InputTypes.symbol(symbol))
+        }
+        
+        
+    }
+    
     
     func evaluate(using variables: Dictionary<String,Double>? = nil)
         -> (result: Double?, isPending: Bool, description: String){
@@ -97,132 +103,64 @@ struct CalculatorBrain{
                 }
                 return number
             }
-            
+
             var result : Double?
             var isPending : Bool = true
-            var description : String = ""
+            var description = [String]()
             var pendingBinaryOperation : PendingBinaryOperation?
             for currentIndex in 0...inputs.count-1{
                 switch inputs[currentIndex]{
                 case .number(let value):
-                    description += String(value)
+                    if pendingBinaryOperation != nil{
+                        result = pendingBinaryOperation!.performOperation(with: value)
+                        pendingBinaryOperation = nil
+                    }
+                    description.append(String(value))
                 case .symbol(let symbol):
                     if let operation = operations[symbol] {
                         switch operation {
                         case .constant(let value):
-                            description += String(value)
+                           description.append(String(value))
                         case .unaryOperation(let function):
                             if 0 < currentIndex {
                                 if let number = getNumber(inputs[currentIndex-1]){
                                     if result != nil{
                                         result! += function(number)
+                                        description.removeLast()
                                     }
                                     else{
                                         result = function(number)
                                     }
+                                    description.append( "\(symbol)(\(number))")
                                 }
                             }
-                    
                         case .binaryOperation(let function):
-                            if pendingBinaryOperation == nil && currentIndex < inputs.count-1{
-                                if let secondOperand = getNumber(inputs[currentIndex+1]){
-                                    if result != nil{
-                                        pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: result!)
-                                        result! = pendingBinaryOperation!.performOperation(with: secondOperand)
-                                        
-                                    }
-                                    else if 0<currentIndex{
-                                        if let firstOperand = getNumber(inputs[currentIndex-1]){
-                                            pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: firstOperand)
-                                            result = pendingBinaryOperation!.performOperation(with: secondOperand)
-                                        }
-                                    }
-                                    pendingBinaryOperation = nil
+                            if pendingBinaryOperation == nil && 0<currentIndex{
+                                if result != nil{
+                                    pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: result!)
+                                }
+                                else if let firstOperand = getNumber(inputs[currentIndex-1]){
+                                    pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: firstOperand)
                                 }
                             }
-                            
-                            description += symbol
-                            
+                            description.append(symbol)
                         case .equals:
                             isPending = false
                         case .clear:
                             pendingBinaryOperation = nil
-                            result = nil
-                            isPending = false
-                            description = ""
+                            result = 0
+                            isPending = true
+                            description.removeAll()
                         }
                     }
                 case .variable(let value):
-                    description += value
+                    description.append(value)
                 }
             }
-            print(description)
-            print(result)
-            print("-----")
-            return (result,isPending,description)
+            return (result,isPending,description.joined(separator: ""))
     }
     
-    mutating func performOperation(_ symbol:String){
-        if let operation = operations[symbol] {
-            inputs.append(InputTypes.symbol(symbol))
-            
-            
-            switch operation {
-                
-            case .constant(let value):
-                if let previosOperations = accumulator.description{
-                    accumulator = (value,(previosOperations.0,symbol))
-                }
-                else{
-                    accumulator=(value,(symbol,""))
-                    
-                }
-                
-            case .unaryOperation(let function):
-                if let number = accumulator.number{
-                    if resultIsPending{
-                        accumulator = (function(number),(accumulator.description!.0 + symbol + "(" + String(accumulator.description!.1) + ")" ,""))
-                    }
-                    else{
-                        if let previusResult = accumulator.description{
-                            accumulator = (function(number),(symbol + "(" + previusResult.0 + ")",""))
-                        }
-                        else{
-                            accumulator = (function(number),(symbol + "(" + String(number) + ")",""))
-                        }
-
-                    }
-
-                }
-                
-            case .binaryOperation(let function):
-                if pendingBinaryOperation != nil {
-                    accumulator = (accumulator.number,accumulator.description!)
-                    performPendingBinaryOperation()
-                    pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: accumulator.number!)
-                    accumulator = (accumulator.number,(accumulator.description!.0 + symbol,accumulator.description!.1))
-                    resultIsPending = true
-                    
-                }
-                else{
-                    pendingBinaryOperation = PendingBinaryOperation(operation: function, firstOperand: accumulator.number!)
-                    accumulator = (nil,(accumulator.description!.0+symbol,accumulator.description!.1))
-                    resultIsPending = true
-                }
-                
-            case .equals:
-                performPendingBinaryOperation()
-                
-            case .clear:
-                accumulator = (0,nil)
-                pendingBinaryOperation = nil
-                resultIsPending = false
-            }
-        }
-         evaluate()
-        
-    }
-    
+  
     
     
     private var pendingBinaryOperation : PendingBinaryOperation?
@@ -237,52 +175,6 @@ struct CalculatorBrain{
         }
         
     }
-    
-    private mutating func performPendingBinaryOperation(){
-        if pendingBinaryOperation != nil && accumulator.number != nil{
-            accumulator = (pendingBinaryOperation!.performOperation(with: accumulator.number!),(accumulator.description!.0+accumulator.description!.1,""))
-            pendingBinaryOperation = nil
-            resultIsPending = false
-        }
-    }
-}
-
-struct Inputs {
-    private enum Symbols{
-        case variable(String)
-        case number(Double)
-        case operation(String)
-    }
-    
-    private var variables:[String:Double]?
-    
-    private var inData:[Symbols]?
-    
-    mutating private func setIndata(data:Symbols){
-        if inData != nil{
-            inData?.append(data)
-        }
-        else{
-            inData = [data]
-        }
-    }
-    
-    mutating func storeOpreand(_ operand:Double){
-        setIndata(data: Symbols.number(operand))
-    }
-    
-    mutating func storeOperand(variable named: String){
-        setIndata(data: Symbols.variable(named))
-    }
-    
-    mutating func storeOperation(_ operation:String){
-        setIndata(data: Symbols.operation(operation))
-    }
-    
-    
-    
-    
-    
     
 }
 
